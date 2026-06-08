@@ -1,0 +1,17 @@
+# src/main/resources/application.properties.example
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/ketty_db
+spring.datasource.username=YOUR_DB_USER
+spring.datasource.password=YOUR_DB_PASSWORD
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+server.port=8080
+spring.application.name=ketty
+
+app.jwt.secret=REPLACE_WITH_A_LONG_RANDOM_SECRET_STRING
+app.jwt.expiration=86400000
