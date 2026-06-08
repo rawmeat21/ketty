@@ -52,6 +52,9 @@ public class User implements UserDetails{
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProfileLink> profileLinks = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Hobby> hobbies = new ArrayList<>();
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
     
