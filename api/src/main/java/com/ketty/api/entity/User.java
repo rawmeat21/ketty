@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "ketty_users")
 public class User implements UserDetails{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -81,8 +81,8 @@ public class User implements UserDetails{
     @Override
     public String getUsername()
     {
-        return password;
-    }
+        return username;
+    }   
 
     @Override
     public boolean isAccountNonExpired()
