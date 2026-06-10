@@ -22,6 +22,7 @@ public class PostResponse {
     private String hobbyName;
     private String content;
     private String imageUrl;
+    private String videoUrl;
     private int likeCount;
     private boolean likedByCurrentUser;
     private int commentCount;

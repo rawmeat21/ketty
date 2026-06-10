@@ -12,4 +12,9 @@ public class CreatePostRequest {
     @Size(max = 2000, message = "Post content cannot exceed 2000 characters")
     private String content;
     private String imageUrl;
+    private String videoUrl;
+
+    public boolean hasConflictingMedia() {
+        return imageUrl != null && !imageUrl.isBlank() && videoUrl != null && !videoUrl.isBlank();
+    }
 }

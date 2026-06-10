@@ -32,7 +32,9 @@ public class Post {
 
     @Column(nullable = false, length = 2000)
     private String content;
+
     private String imageUrl;
+    private String videoUrl;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;

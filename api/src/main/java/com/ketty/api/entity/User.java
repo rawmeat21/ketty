@@ -27,6 +27,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+
 @Entity
 @Table(name = "ketty_users")
 public class User implements UserDetails{
@@ -60,7 +61,7 @@ public class User implements UserDetails{
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Project> projects = new ArrayList<>();
-    
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
     

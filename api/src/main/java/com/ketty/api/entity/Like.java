@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "likes",uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}))
+@Table(name = "likes",uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"})) // user_id and post_id together should be unique
 public class Like {
 
     @Id

@@ -31,7 +31,11 @@ public class PostService {
             hobby = hobbyRepository.findByUserAndId(user, request.getHobbyId()).orElseThrow(() -> new RuntimeException("Hobby not found"));
         }
 
-        Post post = Post.builder().user(user).hobby(hobby).content(request.getContent()).imageUrl(request.getImageUrl()).build();
+        if (request.hasConflictingMedia()) {
+            throw new RuntimeException("A post cannot have both an image and a video");
+        }
+
+        Post post = Post.builder().user(user).hobby(hobby).content(request.getContent()).imageUrl(request.getImageUrl()).videoUrl(request.getVideoUrl()).build();
 
         postRepository.save(post);
 
@@ -66,6 +70,10 @@ public class PostService {
 
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
 
+        if (request.hasConflictingMedia()) {
+            throw new RuntimeException("A post cannot have both an image and a video");
+        }
+
         if (!post.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("You can only edit your own posts");
         }
@@ -77,6 +85,9 @@ public class PostService {
             post.setImageUrl(request.getImageUrl());
         }
 
+        if (request.getVideoUrl() != null) {
+            post.setVideoUrl(request.getVideoUrl());
+        }
         postRepository.save(post);
 
         return mapToPostResponse(post, user);
@@ -166,6 +177,7 @@ public class PostService {
             .hobbyName(post.getHobby() != null ? post.getHobby().getName() : null)
             .content(post.getContent())
             .imageUrl(post.getImageUrl())
+            .videoUrl(post.getVideoUrl())
             .likeCount(likeRepository.countByPost(post))
             .likedByCurrentUser(likeRepository.existsByUserAndPost(currentUser, post))
             .commentCount(commentRepository.countByPost(post))
