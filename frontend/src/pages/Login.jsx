@@ -18,6 +18,7 @@ export default function Login() {
 
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
   const [loading, setLoading] = useState(false)
   const [focusedField, setFocusedField] = useState(null)
 
@@ -35,7 +36,13 @@ export default function Login() {
       login({ username, email, displayName }, token)
       navigate(`/profile/${username}`)
     } catch (err) {
+
       setError(err.response?.data?.error || 'Something went wrong')
+        setDebugInfo(JSON.stringify({
+    message: err.message,
+    status: err.response?.status,
+    data: err.response?.data,
+  }, null, 2))
     } finally {
       setLoading(false)
     }
@@ -63,7 +70,11 @@ export default function Login() {
               {error}
             </div>
           )}
-
+{debugInfo && (
+  <pre style={{ color: '#aaa', fontSize: 11, overflowX: 'auto', marginTop: 12, whiteSpace: 'pre-wrap' }}>
+    {debugInfo}
+  </pre>
+)}
           <form onSubmit={handleSubmit} style={s.form}>
             <div style={s.fieldWrap}>
               <label style={s.label}>Username</label>

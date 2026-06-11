@@ -14,4 +14,37 @@ server.port=8080
 spring.application.name=ketty
 
 app.jwt.secret=REPLACE_WITH_A_LONG_RANDOM_SECRET_STRING
+app.jwt.expiration=86400000spring.datasource.url=jdbc:postgresql://localhost:5432/ketty_db
+spring.datasource.username=ketty_user
+
+
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+
+# automatically modify tables based on the classes (update)
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+spring.jpa.show-sql=true
+
+spring.jpa.properties.hibernate.format_sql=true
+
+server.address=0.0.0.0
+server.port=8080
+
+spring.application.name=ketty
+spring.servlet.multipart.max-file-size=50MB
+spring.servlet.multipart.max-request-size=50MB
+
+backend.url=PUT_YOUR_MACHINE_IP_HERE
+
+app.jwt.secret=PUT_A_LONG_ASS_STRING_HERE
 app.jwt.expiration=86400000
+api.rawg.key=PUT_YOUR_API_KEY_HERE
+api.lastfm.key=PUT_YOUR_API_KEY_HERE
+api.googlebooks.key=PUT_YOUR_API_KEY_HERE
+api.tmdb.key=PUT_YOUR_API_KEY_HERE
+
+cloudinary.cloud-name=PUT_YOUR_CLOUDINARY_NAME_HERE
+cloudinary.api-key=PUT_YOUR_CLOUDINARY_API_KEY_HERE
+cloudinary.api-secret=PUT_YOUR_CLOUDINARY_SECRET_HERE

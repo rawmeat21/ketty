@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import CreatePostForm from "../components/CreatePostForm";
 import {
   ChevronDown, ChevronUp, Plus, Music2, Gamepad2, Tv2, BookOpen, Film,
   Search, Loader2, Check, Heart, MessageCircle, Share2,
   Home, Compass, PlusSquare, Bell, User, Settings, X,
   Edit3, Lock, Image, ArrowLeft, Trash2, Link, CornerDownRight,
-  Camera, LogOut
+  Camera, LogOut, FolderKanban, ExternalLink, Sparkles,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext"; 
@@ -248,6 +249,35 @@ const SECTION_TYPES = [
 
 // ── Display name helper ───────────────────────────────────────────────────────
 const displayLabel = (user) => user?.displayName || user?.username || "";
+
+// ── Projects ─────────────────────────────────────────────────────────────────
+const PROJECT_DESC_LIMIT = 200;
+
+const PROJECT_STATUS = {
+  IN_PROGRESS: { label: "In progress", color: "#f59e0b", bg: "#1c1408", border: "#78350f" },
+  COMPLETED:   { label: "Completed",   color: "#34d399", bg: "#0a1f14", border: "#14532d" },
+  ARCHIVED:    { label: "Archived",    color: "#94a3b8", bg: "#141820", border: "#334155" },
+};
+
+const mapProjectResponse = (p) => ({
+  id:          p.id,
+  title:       p.title,
+  description: p.description || "",
+  status:      p.status,
+  projectUrl:  p.projectUrl || null,
+  imageUrl:    p.imageUrl   || null,
+  tools:       p.tools      || [],
+  createdAt:   p.createdAt,
+  // client-side until backend supports likes
+  likes:       p.likeCount ?? 0,
+  liked:       p.likedByCurrentUser ?? false,
+});
+
+const truncateDesc = (text, max = PROJECT_DESC_LIMIT) => {
+  if (!text) return "";
+  return text.length <= max ? text : text.slice(0, max).trimEnd() + "…";
+};
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MUSIC SECTION
@@ -591,6 +621,87 @@ function SpecialSectionShell({ section, children, C, isOwnProfile, onAddEntries 
     </div>
   );
 }
+
+function ProjectsSection({ projects, C, isOwnProfile, onLikeToggle }) {
+  const [open, setOpen] = useState(false);
+  const prj = buildPRJ(C);
+  const count = projects.length;
+
+  return (
+    <div style={{ borderBottom: `1px solid ${C.border}`, marginBottom: 4 }}>
+      {/* Header — same animation language as SpecialSectionShell */}
+      <button
+        className="section-header-btn"
+        style={{
+          width: "100%", display: "flex", justifyContent: "space-between",
+          alignItems: "center", background: "none", border: "none",
+          color: C.text, padding: "16px 8px", margin: "0 -8px",
+          cursor: "pointer",
+        }}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <FolderKanban size={17} color={open ? prj.accentGlow : C.muted2} />
+          <span style={{
+            fontSize: 16, fontWeight: 600, fontFamily: FONT_DISPLAY,
+            letterSpacing: 0.3,
+            color: open ? prj.accentGlow : C.text,
+            transition: "color 0.28s ease",
+          }}>
+            Projects
+          </span>
+          {count > 0 && (
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
+              background: prj.accentFaint, color: prj.accentGlow,
+              border: `1px solid ${prj.accentDim}`,
+            }}>
+              {count}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          size={16}
+          color={open ? prj.accentGlow : C.muted2}
+          className={`section-chevron${open ? " open" : ""}`}
+        />
+      </button>
+
+      <div className={`section-collapse ${open ? "open" : "closed"}`}>
+        <div className="section-collapse-inner">
+          <div
+            className={`section-collapse-content ${open ? "open" : "closed"}`}
+            style={{ paddingBottom: open ? 18 : 0 }}
+          >
+            {count === 0 ? (
+              <div style={prj.empty}>
+                <Sparkles size={22} color={prj.accentDim} style={{ marginBottom: 8 }} />
+                <p style={{ margin: 0 }}>
+                  {isOwnProfile
+                    ? "No projects yet — showcase what you've built."
+                    : "No projects to show yet."}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {projects.map((p) => (
+                  <ProjectCard
+                    key={p.id}
+                    project={p}
+                    C={C}
+                    onLikeToggle={onLikeToggle}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMMENTS SYSTEM (Reddit-style)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -943,6 +1054,67 @@ function PostCard({ post, C }) {
       {showComments && <CommentsModal post={post} C={C} onClose={() => setShowComments(false)} />}
       {showShare    && <ShareModal    post={post} C={C} onClose={() => setShowShare(false)} />}
     </>
+  );
+}
+
+function ProjectCard({ project, C, onLikeToggle }) {
+  const prj = buildPRJ(C);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      style={{ ...prj.card, ...(hovered ? prj.cardHover : {}) }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={prj.cardTop}>
+        <h3 style={prj.title}>{project.title}</h3>
+        <span style={prj.statusPill(project.status)}>
+          {PROJECT_STATUS[project.status]?.label || project.status}
+        </span>
+      </div>
+
+      {project.description && (
+        <p style={prj.description}>
+          {truncateDesc(project.description)}
+        </p>
+      )}
+
+      <div style={prj.footer}>
+        <button
+          style={prj.likeBtn(project.liked)}
+          onClick={() => onLikeToggle(project.id)}
+          aria-label={project.liked ? "Unlike project" : "Like project"}
+        >
+          <Heart size={16} fill={project.liked ? C.maroonGlow : "none"} />
+          <span>{project.likes}</span>
+        </button>
+
+        {project.projectUrl ? (
+          <a
+            href={project.projectUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={prj.linkBtn}
+            // onMouseEnter={(e) => {
+            //   e.currentTarget.style.transform = "translateY(-1px)";
+            //   e.currentTarget.style.boxShadow = "0 4px 14px #4d1d952d";
+            // }}
+            // onMouseLeave={(e) => {
+            //   e.currentTarget.style.transform = "";
+            //   e.currentTarget.style.boxShadow = "";
+            // }}
+          >
+            <ExternalLink size={14} />
+            View project
+          </a>
+        ) : (
+          <span style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>
+            No link added
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1454,15 +1626,6 @@ function AddSectionModal({
         </>
       ) : (
         <div className="modal-form-step">
-          {isAddingToExisting && (
-            <p style={{
-              margin: "0 0 14px", padding: "10px 14px", borderRadius: 10,
-              background: C.violetFaint, border: `1px solid ${C.violetDim}`,
-              color: C.violetGlow, fontSize: 13,
-            }}>
-              Adding to your existing {typeInfo?.label} section — won't create a duplicate.
-            </p>
-          )}
 
           {selectedType === "music" && (
             <button style={md.spotifyPill}>
@@ -2030,7 +2193,7 @@ function SettingsToggle({ label, sub, val, setVal, C }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOTTOM NAV
 // ═══════════════════════════════════════════════════════════════════════════════
-function BottomNav({ active, C }) {
+function BottomNav({ active, C, onPost }) {
   const items = [
     { id: "feed",          label: "Feed",    Icon: Home       },
     { id: "explore",       label: "Explore", Icon: Compass    },
@@ -2039,6 +2202,9 @@ function BottomNav({ active, C }) {
     { id: "profile",       label: "Profile", Icon: User       },
   ];
   const nb = buildNB(C);
+
+
+
   return (
     <nav style={nb.bar}>
       {items.map(({ id, label, Icon }) => {
@@ -2047,13 +2213,171 @@ function BottomNav({ active, C }) {
         return (
           <button key={id}
             style={{ ...nb.item, ...(isActive && !isPost ? nb.active : {}), ...(isPost ? nb.postBtn : {}) }}
-            onClick={() => { /* TODO: navigate */ }}>
+            onClick={() => { if (isPost) onPost?.(); }}>
             <Icon size={isPost ? 22 : 20} color={isPost ? "#fff" : isActive ? C.violetGlow : C.muted} />
             {!isPost && <span style={{ ...nb.label, color: isActive ? C.violetGlow : C.muted }}>{label}</span>}
           </button>
         );
       })}
     </nav>
+  );
+}
+
+function AddProjectModal({ onClose, onCreated, C }) {
+  const md  = buildMD(C);
+  const ep  = buildEP(C);
+  const prj = buildPRJ(C);
+
+  const [title, setTitle]             = useState("");
+  const [description, setDescription] = useState("");
+  const [projectUrl, setProjectUrl]   = useState("");
+  const [status, setStatus]           = useState("IN_PROGRESS");
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState(null);
+
+  const handleSave = async () => {
+    if (!title.trim()) {
+      setError("Project name is required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.post("/api/projects", {
+        title:       title.trim(),
+        description: description.trim() || null,
+        status,
+        projectUrl:  projectUrl.trim() || null,
+      });
+      onCreated(mapProjectResponse(res.data));
+      onClose();
+    } catch (err) {
+      const msg = err.response?.data;
+      setError(
+        typeof msg === "object"
+          ? Object.values(msg).join(", ")
+          : "Failed to create project."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell C={C} onClose={onClose} maxWidth={480}>
+      <div style={md.topBar}>
+        <div style={{ width: 32 }} />
+        <span style={md.title}>New project</span>
+        <button className="modal-icon-btn" style={md.iconBtn} onClick={onClose}>
+          <X size={18} />
+        </button>
+      </div>
+
+      <p style={md.sub}>
+        Share something you've built. Description is limited to {PROJECT_DESC_LIMIT} characters.
+      </p>
+
+      {error && (
+        <div style={{
+          background: C.maroonFaint, border: `1px solid ${C.maroon}`,
+          borderRadius: 10, padding: "10px 14px", color: C.maroonGlow,
+          fontSize: 13, marginBottom: 16,
+        }}>
+          {error}
+        </div>
+      )}
+
+      {/* Project name */}
+      <div style={ep.section}>
+        <p style={ep.label}>Project name *</p>
+        <input
+          className="modal-search-input"
+          style={ep.input}
+          placeholder="Give your project a name."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={100}
+          autoFocus
+        />
+      </div>
+
+      {/* Description */}
+      <div style={ep.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={{ ...ep.label, margin: 0 }}>Description</p>
+          <span style={{
+            fontSize: 11, color: description.length >= PROJECT_DESC_LIMIT ? C.maroonGlow : C.muted,
+          }}>
+            {description.length}/{PROJECT_DESC_LIMIT}
+          </span>
+        </div>
+        <textarea
+          className="modal-search-input"
+          style={{ ...ep.input, height: 96, resize: "vertical", marginTop: 8 }}
+          placeholder="Give an overview of your project."
+          value={description}
+          onChange={(e) => setDescription(e.target.value.slice(0, PROJECT_DESC_LIMIT))}
+          maxLength={PROJECT_DESC_LIMIT}
+        />
+      </div>
+
+      {/* Status */}
+      <div style={ep.section}>
+        <p style={ep.label}>Status</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {Object.entries(PROJECT_STATUS).map(([key, s]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setStatus(key)}
+              style={{
+                padding: "7px 14px", borderRadius: 20, cursor: "pointer",
+                fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
+                border: `1px solid ${status === key ? s.color : C.border}`,
+                background: status === key ? s.bg : C.surface2,
+                color: status === key ? s.color : C.muted2,
+                transition: "all 0.15s ease",
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Optional link */}
+      <div style={ep.section}>
+        <p style={ep.label}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Link size={12} /> Project link <span style={{ color: C.muted, fontWeight: 400 }}>(optional)</span>
+          </span>
+        </p>
+        <input
+          className="modal-search-input"
+          style={ep.input}
+          placeholder=""
+          value={projectUrl}
+          onChange={(e) => setProjectUrl(e.target.value)}
+          type="url"
+        />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+        <button style={ep.cancelBtn} onClick={onClose}>Cancel</button>
+        <button
+          // className="modal-save-btn"
+          style={{
+            ...md.saveBtn,
+            background: `linear-gradient(135deg, ${prj.accentDim}, #252376)`,
+            opacity: saving ? 0.6 : 1,
+          }}
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? <Loader2 size={14} className="spin" /> : <><Plus size={14} /> Add project</>}
+        </button>
+      </div>
+    </ModalShell>
   );
 }
 
@@ -2098,6 +2422,23 @@ export default function ProfilePage() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [addSectionPrefill, setAddSectionPrefill] = useState(null);
+  const [projects, setProjects]           = useState([]);
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+
+  const handleProjectLike = (projectId) => {
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== projectId) return p;
+        const next = !p.liked;
+        return { ...p, liked: next, likes: next ? p.likes + 1 : Math.max(0, p.likes - 1) };
+        // TODO: POST /api/projects/{projectId}/like when backend supports it
+      })
+    );
+  };
+  const handleProjectCreated = (newProject) => {
+    setProjects((prev) => [newProject, ...prev]);
+  };
 
   useEffect(() => {
     if (!routeUsername) return;
@@ -2132,9 +2473,17 @@ export default function ProfilePage() {
       }
     };
 
+
+
     loadProfile();
   }, [routeUsername, isOwnProfile]);
 
+  useEffect(() => {
+    if (!routeUsername) return;
+    api.get(`/api/projects/user/${routeUsername}`)
+      .then((res) => setProjects((res.data || []).map(mapProjectResponse)))
+      .catch((err) => console.error("Failed to load projects", err));
+  }, [routeUsername]);
   // const existingSectionTypes = sections.map(s => s.type);
 
   const postTabs = [
@@ -2221,19 +2570,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Special sections */}
-      <div style={pg.sectionsWrap}>
-        {/* {sections.map(s => (
-          <SpecialSectionShell key={s.id} section={s} C={C}>
-            {renderSection(s)}
-          </SpecialSectionShell>
-        ))}
-
-        {isOwnProfile && (
-          <button style={pg.addSectionBtn} onClick={() => setShowAddSection(true)}>
-            <Plus size={14} /> Add section
-          </button>
-        )} */}
-
+      {/* <div style={pg.sectionsWrap}>
         {sections.map((s) => (
         <SpecialSectionShell
           key={s.id}
@@ -2260,8 +2597,73 @@ export default function ProfilePage() {
             <Plus size={14} /> Add section
           </button>
         )}
+      </div> */}
+      {/* ── Projects (always first) ── */}
+      <div style={pg.sectionsWrap}>
+        <ProjectsSection
+          projects={projects}
+          C={C}
+          isOwnProfile={isOwnProfile}
+          onLikeToggle={handleProjectLike}
+        />
 
+        {isOwnProfile && (
+          <button
+            style={buildPRJ(C).addBtn}
+            onClick={() => setShowAddProject(true)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 10px 15px #2423765d";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "";
+              e.currentTarget.style.boxShadow = "";
+            }}
+          >
+            <Plus size={16} />
+            Add project
+          </button>
+        )}
+
+        {/* ── Hobby sections (Music, Games, etc.) ── */}
+        {sections.map((s) => (
+          <SpecialSectionShell
+            key={s.id}
+            section={s}
+            C={C}
+            isOwnProfile={isOwnProfile}
+            onAddEntries={(type) => {
+              setAddSectionPrefill(type);
+              setShowAddSection(true);
+            }}
+          >
+            {renderSection(s)}
+          </SpecialSectionShell>
+        ))}
+
+        {isOwnProfile && (
+          <button
+            style={pg.addSectionBtn}
+            onClick={() => {
+              setAddSectionPrefill(null);
+              setShowAddSection(true);
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 10px 15px #4d1d953f";
+            }}
+
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "";
+              e.currentTarget.style.boxShadow = "";
+            }}
+          >
+            <Plus size={14} /> Add section
+          </button>
+        )}
       </div>
+
+
 
       {/* Post tabs — fix: derive active highlight from state, not CSS */}
       <div style={pg.tabBarWrap}>
@@ -2295,7 +2697,7 @@ export default function ProfilePage() {
       />
 
       {/* Bottom nav */}
-      <BottomNav active="profile" C={C} />
+      <BottomNav active="profile" C={C} onPost={() => setShowCreatePost(true)} />
 
       {/* Modals */}
       {/* {showAddSection && (
@@ -2344,6 +2746,33 @@ export default function ProfilePage() {
           C={C}
         />
       )}
+
+      {showAddProject && (
+        <AddProjectModal
+          C={C}
+          onClose={() => setShowAddProject(false)}
+          onCreated={handleProjectCreated}
+        />
+      )}
+
+      {showCreatePost && (
+        <div className="modal-overlay" style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          display: "flex", alignItems: "flex-end",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.6)",
+        }} onClick={() => setShowCreatePost(false)}>
+          <div style={{ width: "100%", maxWidth: 680, padding: "0 0 20px" }}
+            onClick={(e) => e.stopPropagation()}>
+            <CreatePostForm
+              currentUser={safeUser}
+              hobbies={hobbies}
+              onPostCreated={() => setShowCreatePost(false)}
+              onCancel={() => setShowCreatePost(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2366,7 +2795,7 @@ const buildPG = (C) => ({
   handle:       { margin: "0 0 10px", color: C.muted, fontSize: 15 },
   bio:          { margin: "0 0 16px", fontSize: 15, lineHeight: 1.7, color: C.muted2, maxWidth: 420, marginLeft: "auto", marginRight: "auto" },
   editBtn:      { display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 20px", borderRadius: 20, border: `1px solid ${C.violetDim}`, background: "transparent", color: C.violetGlow, cursor: "pointer", fontSize: 13, fontWeight: 500 },
-  sectionsWrap: { padding: "0 16px 10px" },
+  sectionsWrap: { padding: "0 18px 10px" },
   addSectionBtn:{ display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center", padding: "12px 0", background: "none", border: `1px dashed ${C.violetDim}`, borderRadius: 10, color: C.muted, cursor: "pointer", fontSize: 13, marginTop: 10 },
   tabBarWrap:   { position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `1px solid ${C.border}` },
   tabBar:       { display: "flex", overflowX: "auto", padding: "0 16px", scrollbarWidth: "none", gap: 2 },
@@ -2565,3 +2994,126 @@ const buildNB = (C) => ({
   postBtn: { background: C.violet, borderRadius: "50%", width: 46, height: 46, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${C.violet}88`, marginBottom: 6 },
   label:   { fontSize: 10, fontWeight: 500 },
 });
+
+
+const buildPRJ = (C) => ({
+  // section shell accent — warm amber, distinct from violet hobbies
+  accent:      "#252376",   
+  accentFaint: "#1a0510",   
+  accentDim:   "#11122d",   
+  accentGlow:  "#6600fe",   
+  
+  card: {
+    background:   C.surface,
+    border:       `1px solid rgb(76, 29, 149)`,
+    borderRadius: 14,
+    padding:      "16px 18px",
+    display:      "flex",
+    flexDirection:"column",
+    gap:          10,
+    transition:   "border-color 0.2s ease, box-shadow 0.2s ease",
+  },
+  cardHover: {
+    borderColor: C.violet,
+    boxShadow:   "0 4px 20px rgb(76, 29, 149)",
+  },
+  cardTop: {
+    display:        "flex",
+    alignItems:     "flex-start",
+    justifyContent: "space-between",
+    gap:            12,
+  },
+  title: {
+    margin:       0,
+    fontSize:     18,
+    fontWeight:   700,
+    fontFamily:   FONT_DISPLAY,
+    color:        C.text,
+    letterSpacing:0.2,
+    lineHeight:   1.3,
+  },
+  statusPill: (status) => {
+    const s = PROJECT_STATUS[status] || PROJECT_STATUS.IN_PROGRESS;
+    return {
+      fontSize:      10,
+      fontWeight:    700,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      padding:       "4px 10px",
+      borderRadius:  20,
+      background:    s.bg,
+      color:         s.color,
+      border:        `1px solid ${s.border}`,
+      whiteSpace:    "nowrap",
+      flexShrink:    0,
+    };
+  },
+  description: {
+    margin:     0,
+    fontSize:   14,
+    lineHeight: 1.65,
+    color:      C.muted2,
+  },
+  footer: {
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "space-between",
+    paddingTop:     4,
+    borderTop:      `1px solid ${C.border}`,
+    marginTop:      2,
+  },
+  likeBtn: (liked) => ({
+    display:    "inline-flex",
+    alignItems: "center",
+    gap:        6,
+    background: "none",
+    border:     "none",
+    cursor:     "pointer",
+    fontSize:   14,
+    fontWeight: 500,
+    color:      liked ? C.maroonGlow : C.muted2,
+    padding:    "4px 0",
+    transition: "color 0.15s ease, transform 0.15s ease",
+  }),
+  linkBtn: {
+    display:       "inline-flex",
+    alignItems:    "center",
+    gap:           6,
+    padding:       "6px 14px",
+    borderRadius:  20,
+    border:        `1px solid #252376`,
+    background:    "transparent",
+    color:         "#ffffff",
+    fontSize:      13,
+    fontWeight:    600,
+    textDecoration:"none",
+    transition:    "transform 0.15s ease, box-shadow 0.15s ease",
+  },
+  empty: {
+    textAlign:  "center",
+    padding:    "28px 16px",
+    color:      C.muted,
+    fontSize:   14,
+    lineHeight: 1.6,
+  },
+  addBtn: {
+    display:        "flex",
+    alignItems:     "center",
+    justifyContent: "center",
+    gap:            8,
+    width:          "100%",
+    padding:        "13px 0",
+    marginBottom:   14,
+    background:     "transparent",
+    border:         `1px dashed #252376`,
+    borderRadius:   12,
+    color:          "#302e9c",
+    cursor:         "pointer",
+    fontSize:       14,
+    fontWeight:     600,
+    fontFamily:     FONT_BODY,
+    transition:     "transform 0.15s ease, box-shadow 0.15s ease",
+  },
+});
+
+
